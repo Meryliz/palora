@@ -36,6 +36,16 @@ export default function Dashboard() {
     router.push('/')
   }
 
+  const handleBuy = async (ill: any) => {
+    const res = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ illustrationId: ill.id, illustrationTitle: ill.title, price: 1.00 })
+    })
+    const { url } = await res.json()
+    if (url) window.location.href = url
+  }
+
   const levels = [
     { key: 'easy', label: 'Algaja', desc: 'Lihtsad ja suured alad', color: '#a8d8a8', bg: '#f0faf0' },
     { key: 'medium', label: 'Harrastaja', desc: 'Loomad ja kujundid', color: '#f4a96e', bg: '#fff7f0' },
@@ -45,9 +55,7 @@ export default function Dashboard() {
   const current = levels.find(l => l.key === difficulty)!
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: "'Segoe UI', sans-serif" }}>
-
-      {/* Header */}
+    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
@@ -70,26 +78,13 @@ export default function Dashboard() {
           <Link href="/groups" style={{ background: '#f0f0ff', border: '1px solid #c0c0ff', borderRadius: '100px', padding: '8px 18px', color: '#6060cc', textDecoration: 'none', fontSize: '13px', fontWeight: 500 }}>
             👥 Grupid
           </Link>
-          <button onClick={handleLogout} style={{
-            background: '#f5f5f5',
-            border: 'none',
-            color: '#666',
-            padding: '8px 18px',
-            borderRadius: '100px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 500
-          }}>Logi välja</button>
+          <button onClick={handleLogout} style={{ background: '#f5f5f5', border: 'none', color: '#666', padding: '8px 18px', borderRadius: '100px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>
+            Logi välja
+          </button>
         </div>
       </header>
 
-      {/* Hero */}
-      <div style={{
-        background: 'linear-gradient(135deg, #fff9f0 0%, #f0f4ff 50%, #f9f0ff 100%)',
-        padding: '56px 40px',
-        textAlign: 'center',
-        borderBottom: '1px solid #f0ece6'
-      }}>
+      <div style={{ background: 'linear-gradient(135deg, #fff9f0 0%, #f0f4ff 50%, #f9f0ff 100%)', padding: '56px 40px', textAlign: 'center', borderBottom: '1px solid #f0ece6' }}>
         <h1 style={{ fontSize: '40px', fontWeight: 800, color: '#2d2d2d', margin: '0 0 12px', letterSpacing: '-1px' }}>
           Tere tulemast Palorasse! 🌈
         </h1>
@@ -99,8 +94,6 @@ export default function Dashboard() {
       </div>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px' }}>
-
-        {/* Level selector */}
         <div style={{ display: 'flex', gap: '16px', marginBottom: '40px' }}>
           {levels.map(l => (
             <button
@@ -124,80 +117,55 @@ export default function Dashboard() {
               <div style={{ fontSize: '13px', color: difficulty === l.key ? '#666' : '#ccc' }}>
                 {l.desc}
               </div>
-              <div style={{
-                width: '32px',
-                height: '4px',
-                borderRadius: '2px',
-                background: difficulty === l.key ? l.color : '#ede9e3',
-                marginTop: '12px',
-                transition: 'all 0.2s'
-              }} />
+              <div style={{ width: '32px', height: '4px', borderRadius: '2px', background: difficulty === l.key ? l.color : '#ede9e3', marginTop: '12px', transition: 'all 0.2s' }} />
             </button>
           ))}
         </div>
 
-        {/* Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
           {illustrations.map(ill => (
-            <Link href={`/color/${ill.id}`} key={ill.id} style={{ textDecoration: 'none' }}>
-              <div
-                style={{
-                  background: '#ffffff',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  border: '1px solid #f0ece6',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)'
-                  e.currentTarget.style.transform = 'translateY(-4px)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                <div style={{
-                  background: '#f8f8f8',
-                  height: '220px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: ill.svg_data
-                    ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;" ')
-                    : ''
-                }}
-                />
+            <div key={ill.id}
+              style={{ background: '#ffffff', borderRadius: '20px', overflow: 'hidden', border: '1px solid #f0ece6', transition: 'all 0.2s', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-4px)' }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              {ill.is_free ? (
+                <Link href={`/color/${ill.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;" ') : '' }}
+                  />
+                </Link>
+              ) : (
+                <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', zIndex: 1 }}>🔒</div>
+                  <div dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;opacity:0.4;" ') : '' }} />
+                </div>
+              )}
 
-                <div style={{ padding: '16px 20px 20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>
-                      {ill.title}
-                    </h3>
-                    <span style={{
-                      fontSize: '11px',
-                      padding: '4px 10px',
-                      borderRadius: '100px',
-                      background: ill.is_free ? '#e8f8e8' : '#fff0e8',
-                      color: ill.is_free ? '#2a7a2a' : '#c06020',
-                      fontWeight: 600,
-                      letterSpacing: '0.3px'
-                    }}>
-                      {ill.is_free ? '✓ Tasuta' : '🔒 0.99€'}
+              <div style={{ padding: '16px 20px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>
+                    {ill.title}
+                  </h3>
+                  {ill.is_free ? (
+                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
+                      ✓ Tasuta
                     </span>
-                  </div>
-                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: current.color }} />
-                    <span style={{ fontSize: '12px', color: '#aaa' }}>{current.label} tase</span>
-                  </div>
+                  ) : (
+                    <button
+                      onClick={() => handleBuy(ill)}
+                      style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#fff0e8', color: '#c06020', fontWeight: 600, border: '1px solid #f4c090', cursor: 'pointer' }}
+                    >
+                      🔒 1.00€
+                    </button>
+                  )}
+                </div>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: current.color }} />
+                  <span style={{ fontSize: '12px', color: '#aaa' }}>{current.label} tase</span>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
 
