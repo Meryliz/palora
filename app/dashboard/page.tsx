@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [illustrations, setIllustrations] = useState<any[]>([])
   const [difficulty, setDifficulty] = useState('easy')
+  const [purchases, setPurchases] = useState<string[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -18,6 +19,18 @@ export default function Dashboard() {
     }
     getUser()
   }, [])
+
+  useEffect(() => {
+    const getPurchases = async () => {
+      if (!user) return
+      const { data } = await supabase
+        .from('purchases')
+        .select('illustration_id')
+        .eq('user_id', user.id)
+      setPurchases(data?.map(p => p.illustration_id) || [])
+    }
+    getPurchases()
+  }, [user])
 
   useEffect(() => {
     const getIllustrations = async () => {
@@ -40,7 +53,12 @@ export default function Dashboard() {
     const res = await fetch('/api/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ illustrationId: ill.id, illustrationTitle: ill.title, price: 1.00 })
+      body: JSON.stringify({
+        illustrationId: ill.id,
+        illustrationTitle: ill.title,
+        price: 1.00,
+        userId: user?.id
+      })
     })
     const { url } = await res.json()
     if (url) window.location.href = url
@@ -123,50 +141,53 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-          {illustrations.map(ill => (
-            <div key={ill.id}
-              style={{ background: '#ffffff', borderRadius: '20px', overflow: 'hidden', border: '1px solid #f0ece6', transition: 'all 0.2s', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
-              onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-4px)' }}
-              onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              {ill.is_free ? (
-                <Link href={`/color/${ill.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                  <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-                    dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;" ') : '' }}
-                  />
-                </Link>
-              ) : (
-                <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative' }}>
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', zIndex: 1 }}>🔒</div>
-                  <div dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;opacity:0.4;" ') : '' }} />
-                </div>
-              )}
+          {illustrations.map(ill => {
+            const isUnlocked = ill.is_free || purchases.includes(ill.id)
+            return (
+              <div key={ill.id}
+                style={{ background: '#ffffff', borderRadius: '20px', overflow: 'hidden', border: '1px solid #f0ece6', transition: 'all 0.2s', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-4px)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                {isUnlocked ? (
+                  <Link href={`/color/${ill.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                      dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;" ') : '' }}
+                    />
+                  </Link>
+                ) : (
+                  <div style={{ background: '#f8f8f8', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', zIndex: 1 }}>🔒</div>
+                    <div dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:180px;opacity:0.4;" ') : '' }} />
+                  </div>
+                )}
 
-              <div style={{ padding: '16px 20px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>
-                    {ill.title}
-                  </h3>
-                  {ill.is_free ? (
-                    <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
-                      ✓ Tasuta
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleBuy(ill)}
-                      style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#fff0e8', color: '#c06020', fontWeight: 600, border: '1px solid #f4c090', cursor: 'pointer' }}
-                    >
-                      🔒 1.00€
-                    </button>
-                  )}
-                </div>
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: current.color }} />
-                  <span style={{ fontSize: '12px', color: '#aaa' }}>{current.label} tase</span>
+                <div style={{ padding: '16px 20px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>
+                      {ill.title}
+                    </h3>
+                    {isUnlocked ? (
+                      <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
+                        {ill.is_free ? '✓ Tasuta' : '✓ Ostetud'}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleBuy(ill)}
+                        style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#fff0e8', color: '#c06020', fontWeight: 600, border: '1px solid #f4c090', cursor: 'pointer' }}
+                      >
+                        🔒 1.00€
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: current.color }} />
+                    <span style={{ fontSize: '12px', color: '#aaa' }}>{current.label} tase</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {illustrations.length === 0 && (
