@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Strict-Transport-Security',
-            value: ''
+            value: 'max-age=0'
           }
         ]
       }
