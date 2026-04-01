@@ -1,37 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const illustrationId = searchParams.get('illustrationId')
-  const userId = searchParams.get('userId')
-  const sessionId = searchParams.get('session_id')
-
-  if (!illustrationId || !userId || !sessionId) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    const { illustrationId, illustrationTitle, price, userId } = await req.json()
 
-    if (session.payment_status === 'paid') {
-      await supabase.from('purchases').upsert({
-        user_id: userId,
-        illustration_id: illustrationId,
-        amount: session.amount_total
-      }, { onConflict: 'user_id,illustration_id' })
-    }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: illustrationTitle,
+              description: 'Palora värvimispilt'
+            },
+            unit_amount: Math.round(price * 100)
+          },
+          quantity: 1
+        }
+      ],
+      mode: 'payment',
+      metadata: { illustrationId, userId },
+      success_url: `https://www.palora.ee/api/purchase-success?illustrationId=${illustrationId}&userId=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.palora.ee/dashboard?cancelled=true`
+    })
+
+    return NextResponse.json({ url: session.url })
   } catch (error) {
-    console.error('Purchase error:', error)
+    return NextResponse.json({ error: 'Makse loomine ebaõnnestus' }, { status: 500 })
   }
-
-  return NextResponse.redirect(new URL('/dashboard?success=true', req.url))
 }
