@@ -23,11 +23,34 @@ export default function Dashboard() {
   useEffect(() => {
     const getPurchases = async () => {
       if (!user) return
-      const { data } = await supabase
+
+      const { data: personalPurchases } = await supabase
         .from('purchases')
         .select('illustration_id')
         .eq('user_id', user.id)
-      setPurchases(data?.map(p => p.illustration_id) || [])
+
+      const { data: memberGroups } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id)
+
+      const groupIds = memberGroups?.map(g => g.group_id) || []
+
+      let groupIllustrationIds: string[] = []
+      if (groupIds.length > 0) {
+        const { data: groupPurchases } = await supabase
+          .from('group_purchases')
+          .select('illustration_id')
+          .in('group_id', groupIds)
+        groupIllustrationIds = groupPurchases?.map(p => p.illustration_id) || []
+      }
+
+      const allPurchases = [
+        ...(personalPurchases?.map(p => p.illustration_id) || []),
+        ...groupIllustrationIds
+      ]
+
+      setPurchases([...new Set(allPurchases)])
     }
     getPurchases()
   }, [user])
@@ -111,7 +134,6 @@ export default function Dashboard() {
       </div>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
-        {/* Level selector */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
           {levels.map(l => (
             <button
@@ -140,7 +162,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
           {illustrations.map(ill => {
             const isUnlocked = ill.is_free || purchases.includes(ill.id)
