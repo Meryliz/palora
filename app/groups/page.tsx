@@ -28,7 +28,7 @@ export default function Groups() {
       .from('group_members')
       .select('group_id, groups(*)')
       .eq('user_id', userId)
-    
+
     const uniqueGroups = Array.from(
       new Map((data?.map((d: any) => d.groups) || []).map((g: any) => [g.id, g])).values()
     )
@@ -39,7 +39,7 @@ export default function Groups() {
     if (!newGroupName.trim()) return
     setLoading(true)
     const code = Math.random().toString(36).substring(2, 8).toUpperCase()
-    
+
     const { data: group } = await supabase
       .from('groups')
       .insert({ name: newGroupName, invite_code: code, owner_id: user.id })
@@ -87,7 +87,7 @@ export default function Groups() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: "'Segoe UI', sans-serif" }}>
+    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
@@ -165,7 +165,7 @@ export default function Groups() {
                   <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d' }}>{group.name}</p>
                   <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#aaa' }}>Kutse kood: <strong>{group.invite_code}</strong></p>
                 </div>
-                <Link href="/dashboard" style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 16px', color: 'white', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+                <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 16px', color: 'white', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
                   Värvi koos →
                 </Link>
               </div>

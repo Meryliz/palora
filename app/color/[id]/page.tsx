@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 
 const COLORS = [
   '#FF6B6B', '#FF8E53', '#FFC300', '#2ECC71', '#1ABC9C',
@@ -13,6 +13,8 @@ const COLORS = [
 
 export default function ColorPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
+  const groupId = searchParams.get('group')
   const router = useRouter()
   const [illustration, setIllustration] = useState<any>(null)
   const [selectedColor, setSelectedColor] = useState('#FF6B6B')
@@ -42,12 +44,21 @@ export default function ColorPage() {
   }, [params.id])
 
   useEffect(() => {
+    if (!user) return
+
     const getColors = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('coloring_progress')
         .select('*')
         .eq('illustration_id', params.id)
-      
+
+      if (groupId) {
+        query = query.eq('group_id', groupId)
+      } else {
+        query = query.eq('user_id', user.id).is('group_id', null)
+      }
+
+      const { data } = await query
       if (data) {
         const colorMap: Record<string, string> = {}
         data.forEach(item => { colorMap[item.section_id] = item.color })
@@ -56,27 +67,32 @@ export default function ColorPage() {
     }
     getColors()
 
+    const channelName = groupId
+      ? `coloring-group-${groupId}-${params.id}`
+      : `coloring-user-${user.id}-${params.id}`
+
     const channel = supabase
-      .channel(`coloring-${params.id}-${Math.random()}`)
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'coloring_progress',
         filter: `illustration_id=eq.${params.id}`
       }, payload => {
-        console.log('Realtime event:', payload)
         const newData = (payload as any).new
-        if (newData) {
+        if (!newData) return
+        if (groupId && newData.group_id === groupId) {
+          setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
+        } else if (!groupId && newData.user_id === user.id && !newData.group_id) {
           setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
         }
       })
       .subscribe(status => {
-        console.log('Realtime status:', status)
         setRealtimeStatus(status)
       })
 
     return () => { supabase.removeChannel(channel) }
-  }, [params.id])
+  }, [params.id, user, groupId])
 
   const handleSectionClick = async (sectionId: string) => {
     setSections(prev => ({ ...prev, [sectionId]: selectedColor }))
@@ -88,12 +104,11 @@ export default function ColorPage() {
         section_id: sectionId,
         color: selectedColor,
         user_id: user?.id,
+        group_id: groupId || null,
         updated_at: new Date().toISOString()
       })
-    
-    if (error) {
-      console.error('Upsert error:', error.message, error.details, error.hint)
-    }
+
+    if (error) console.error('Upsert error:', error.message)
   }
 
   const getSvgWithColors = () => {
@@ -115,7 +130,7 @@ export default function ColorPage() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: "'Segoe UI', sans-serif" }}>
+    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
@@ -127,14 +142,19 @@ export default function ColorPage() {
         boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
       }}>
         <button
-          onClick={() => router.push('/dashboard')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#666', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => router.push(groupId ? '/groups' : '/dashboard')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#666' }}
         >
           ← Tagasi
         </button>
-        <span style={{ fontWeight: 700, fontSize: '16px', color: '#2d2d2d' }}>{illustration.title}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: '16px', color: '#2d2d2d' }}>{illustration.title}</span>
+          <span style={{ fontSize: '11px', color: '#aaa' }}>
+            {groupId ? '👥 Grupi värvimine' : '👤 Isiklik värvimine'}
+          </span>
+        </div>
         <span style={{ fontSize: '11px', color: realtimeStatus === 'SUBSCRIBED' ? '#2ECC71' : '#aaa' }}>
-          {realtimeStatus === 'SUBSCRIBED' ? '● Reaalajas' : '● Ühendab...'}
+          {realtimeStatus === 'SUBSCRIBED' ? '● Ühendatud' : '● Ühendab...'}
         </span>
       </header>
 
@@ -155,15 +175,8 @@ export default function ColorPage() {
 
         <div style={{ width: '220px', background: '#ffffff', borderLeft: '1px solid #f0ece6', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#2d2d2d' }}>Vali värv</p>
-          
-          <div style={{
-            width: '100%',
-            height: '48px',
-            borderRadius: '10px',
-            background: selectedColor,
-            border: '2px solid #e8e4de',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }} />
+
+          <div style={{ width: '100%', height: '48px', borderRadius: '10px', background: selectedColor, border: '2px solid #e8e4de' }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
             {COLORS.map(color => (
@@ -171,11 +184,7 @@ export default function ColorPage() {
                 key={color}
                 onClick={() => setSelectedColor(color)}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '6px',
-                  background: color,
-                  cursor: 'pointer',
+                  width: '32px', height: '32px', borderRadius: '6px', background: color, cursor: 'pointer',
                   border: selectedColor === color ? '3px solid #2d2d2d' : '2px solid #e8e4de',
                   transition: 'all 0.15s'
                 }}
@@ -196,21 +205,18 @@ export default function ColorPage() {
           <button
             onClick={async () => {
               setSections({})
-              await supabase
+              let query = supabase
                 .from('coloring_progress')
                 .delete()
                 .eq('illustration_id', params.id)
+              if (groupId) {
+                query = query.eq('group_id', groupId)
+              } else {
+                query = query.eq('user_id', user?.id).is('group_id', null)
+              }
+              await query
             }}
-            style={{
-              background: '#fff5f5',
-              border: '1px solid #fcc',
-              color: '#c00',
-              padding: '10px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              marginTop: 'auto'
-            }}
+            style={{ background: '#fff5f5', border: '1px solid #fcc', color: '#c00', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', marginTop: 'auto' }}
           >
             🗑️ Lähtesta
           </button>
