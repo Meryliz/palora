@@ -22,32 +22,21 @@ export default function ColorPage() {
   const [user, setUser] = useState<any>(null)
   const [realtimeStatus, setRealtimeStatus] = useState('')
   const [showColors, setShowColors] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    const getUser = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
-    }
-    getUser()
-  }, [])
 
-  useEffect(() => {
-    const getIllustration = async () => {
-      const { data } = await supabase
+      const { data: ill } = await supabase
         .from('illustrations')
         .select('*')
         .eq('id', params.id)
         .single()
-      setIllustration(data)
-    }
-    getIllustration()
-  }, [params.id])
+      setIllustration(ill)
 
-  useEffect(() => {
-    if (!user) return
-
-    const getColors = async () => {
       let query = supabase
         .from('coloring_progress')
         .select('*')
@@ -62,40 +51,44 @@ export default function ColorPage() {
       const { data } = await query
       if (data) {
         const colorMap: Record<string, string> = {}
-        data.forEach(item => { colorMap[item.section_id] = item.color })
+        data.forEach((item: any) => { colorMap[item.section_id] = item.color })
         setSections(colorMap)
       }
+
+      setLoaded(true)
+
+      const channelName = groupId
+        ? `coloring-group-${groupId}-${params.id}`
+        : `coloring-user-${user.id}-${params.id}`
+
+      const channel = supabase
+        .channel(channelName)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'coloring_progress',
+          filter: `illustration_id=eq.${params.id}`
+        }, payload => {
+          const newData = (payload as any).new
+          if (!newData) return
+          if (groupId && newData.group_id === groupId) {
+            setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
+          } else if (!groupId && newData.user_id === user.id && !newData.group_id) {
+            setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
+          }
+        })
+        .subscribe(status => {
+          setRealtimeStatus(status)
+        })
+
+      return () => { supabase.removeChannel(channel) }
     }
-    getColors()
 
-    const channelName = groupId
-      ? `coloring-group-${groupId}-${params.id}`
-      : `coloring-user-${user.id}-${params.id}`
-
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'coloring_progress',
-        filter: `illustration_id=eq.${params.id}`
-      }, payload => {
-        const newData = (payload as any).new
-        if (!newData) return
-        if (groupId && newData.group_id === groupId) {
-          setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
-        } else if (!groupId && newData.user_id === user.id && !newData.group_id) {
-          setSections(prev => ({ ...prev, [newData.section_id]: newData.color }))
-        }
-      })
-      .subscribe(status => {
-        setRealtimeStatus(status)
-      })
-
-    return () => { supabase.removeChannel(channel) }
-  }, [params.id, user, groupId])
+    init()
+  }, [params.id, groupId])
 
   const handleSectionClick = async (sectionId: string) => {
+    if (!user) return
     setSections(prev => ({ ...prev, [sectionId]: selectedColor }))
 
     const { error } = await supabase
@@ -104,7 +97,7 @@ export default function ColorPage() {
         illustration_id: String(params.id),
         section_id: sectionId,
         color: selectedColor,
-        user_id: user?.id,
+        user_id: user.id,
         group_id: groupId || null,
         updated_at: new Date().toISOString()
       })
@@ -124,16 +117,16 @@ export default function ColorPage() {
     return svg
   }
 
-  if (!illustration) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <p>Laadin...</p>
+  if (!loaded) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ fontSize: '32px' }}>🎨</div>
+      <p style={{ color: '#aaa', fontSize: '14px' }}>Laadin...</p>
     </div>
   )
 
   return (
     <main style={{ minHeight: '100vh', background: '#fafafa', fontFamily: 'Segoe UI, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Header */}
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
@@ -152,7 +145,7 @@ export default function ColorPage() {
           ← Tagasi
         </button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '14px', color: '#2d2d2d' }}>{illustration.title}</span>
+          <span style={{ fontWeight: 700, fontSize: '14px', color: '#2d2d2d' }}>{illustration?.title}</span>
           <span style={{ fontSize: '10px', color: '#aaa' }}>
             {groupId ? '👥 Grupp' : '👤 Isiklik'}
           </span>
@@ -162,7 +155,6 @@ export default function ColorPage() {
         </span>
       </header>
 
-      {/* Canvas */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
         <div
           style={{
@@ -186,14 +178,12 @@ export default function ColorPage() {
         />
       </div>
 
-      {/* Color bar - mobiilisõbralik alumine riba */}
       <div style={{
         background: 'white',
         borderTop: '1px solid #f0ece6',
         padding: '12px 16px',
         flexShrink: 0
       }}>
-        {/* Selected color + toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: showColors ? '12px' : '0' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: selectedColor, border: '2px solid #e8e4de', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1 }}>
@@ -213,11 +203,10 @@ export default function ColorPage() {
             onClick={() => setShowColors(!showColors)}
             style={{ background: '#f5f5f5', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px', color: '#666', flexShrink: 0 }}
           >
-            {showColors ? '▲' : '▼ Rohkem'}
+            {showColors ? '▲' : '▼'}
           </button>
         </div>
 
-        {/* Extended color panel */}
         {showColors && (
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px', marginBottom: '10px' }}>
@@ -240,7 +229,7 @@ export default function ColorPage() {
                 onChange={e => setSelectedColor(e.target.value)}
                 style={{ width: '40px', height: '36px', border: '1px solid #e8e4de', borderRadius: '8px', cursor: 'pointer', padding: '2px' }}
               />
-              <span style={{ fontSize: '12px', color: '#aaa' }}>Kohandatud värv</span>
+              <span style={{ fontSize: '12px', color: '#aaa' }}>Kohandatud</span>
               <button
                 onClick={async () => {
                   setSections({})
