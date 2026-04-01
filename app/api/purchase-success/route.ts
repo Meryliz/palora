@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const illustrationId = searchParams.get('illustrationId')
   const userId = searchParams.get('userId')
+  const groupId = searchParams.get('groupId')
   const sessionId = searchParams.get('session_id')
 
   if (!illustrationId || !userId || !sessionId) {
@@ -23,15 +24,27 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.retrieve(sessionId)
 
     if (session.payment_status === 'paid') {
-      await supabase.from('purchases').upsert({
-        user_id: userId,
-        illustration_id: illustrationId,
-        amount: session.amount_total
-      }, { onConflict: 'user_id,illustration_id' })
+      if (groupId) {
+        await supabase.from('group_purchases').upsert({
+          group_id: groupId,
+          illustration_id: illustrationId,
+          amount: session.amount_total
+        }, { onConflict: 'group_id,illustration_id' })
+      } else {
+        await supabase.from('purchases').upsert({
+          user_id: userId,
+          illustration_id: illustrationId,
+          amount: session.amount_total
+        }, { onConflict: 'user_id,illustration_id' })
+      }
     }
   } catch (error) {
     console.error('Purchase error:', error)
   }
 
-  return NextResponse.redirect(new URL('/dashboard?success=true', req.url))
+  const redirectUrl = groupId
+    ? `/groups`
+    : `/dashboard?success=true`
+
+  return NextResponse.redirect(new URL(redirectUrl, req.url))
 }

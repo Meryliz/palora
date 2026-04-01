@@ -11,6 +11,9 @@ export default function Groups() {
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [groupPurchases, setGroupPurchases] = useState<Record<string, string[]>>({})
+  const [illustrations, setIllustrations] = useState<any[]>([])
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -23,6 +26,18 @@ export default function Groups() {
     getUser()
   }, [])
 
+  useEffect(() => {
+    const getIllustrations = async () => {
+      const { data } = await supabase
+        .from('illustrations')
+        .select('id, title, difficulty, is_free')
+        .eq('is_free', false)
+        .order('difficulty')
+      setIllustrations(data || [])
+    }
+    getIllustrations()
+  }, [])
+
   const loadGroups = async (userId: string) => {
     const { data } = await supabase
       .from('group_members')
@@ -33,6 +48,22 @@ export default function Groups() {
       new Map((data?.map((d: any) => d.groups) || []).map((g: any) => [g.id, g])).values()
     )
     setGroups(uniqueGroups)
+
+    // Laadi grupi ostud
+    const groupIds = uniqueGroups.map((g: any) => g.id)
+    if (groupIds.length > 0) {
+      const { data: purchases } = await supabase
+        .from('group_purchases')
+        .select('group_id, illustration_id')
+        .in('group_id', groupIds)
+
+      const purchaseMap: Record<string, string[]> = {}
+      purchases?.forEach((p: any) => {
+        if (!purchaseMap[p.group_id]) purchaseMap[p.group_id] = []
+        purchaseMap[p.group_id].push(p.illustration_id)
+      })
+      setGroupPurchases(purchaseMap)
+    }
   }
 
   const createGroup = async () => {
@@ -86,6 +117,22 @@ export default function Groups() {
     setLoading(false)
   }
 
+  const handleGroupBuy = async (groupId: string, ill: any) => {
+    const res = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        illustrationId: ill.id,
+        illustrationTitle: `${ill.title} (grupp)`,
+        price: 3.00,
+        userId: user?.id,
+        groupId
+      })
+    })
+    const { url } = await res.json()
+    if (url) window.location.href = url
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
       <header style={{
@@ -113,6 +160,15 @@ export default function Groups() {
           </div>
         )}
 
+        {/* Info */}
+        <div style={{ background: 'linear-gradient(135deg, #f0f4ff, #f9f0ff)', borderRadius: '16px', padding: '20px', marginBottom: '20px', border: '1px solid #e0d8f0' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>👥 Grupi info</h3>
+          <p style={{ margin: 0, fontSize: '13px', color: '#666', lineHeight: 1.6 }}>
+            Grupp on kuni <strong>10 liikmele</strong>. Iga liige saab grupile pilte osta — <strong>3€ per pilt</strong>. Kõik grupiliikmed saavad ostetud pilti koos värvida!
+          </p>
+        </div>
+
+        {/* Loo grupp */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Loo uus grupp</h2>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -132,6 +188,7 @@ export default function Groups() {
           </div>
         </div>
 
+        {/* Liitu grupiga */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Liitu grupiga</h2>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -151,20 +208,59 @@ export default function Groups() {
           </div>
         </div>
 
+        {/* Minu grupid */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Minu grupid</h2>
           {groups.length === 0 ? (
             <p style={{ color: '#aaa', fontSize: '14px', margin: 0 }}>Sul pole veel gruppe</p>
           ) : (
             groups.map(group => (
-              <div key={group.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f0ece6', gap: '12px' }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</p>
-                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>Kood: <strong>{group.invite_code}</strong></p>
+              <div key={group.id} style={{ borderBottom: '1px solid #f0ece6', paddingBottom: '16px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d', fontSize: '15px' }}>{group.name}</p>
+                    <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>Kood: <strong>{group.invite_code}</strong></p>
+                  </div>
+                  <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 14px', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Värvi koos →
+                  </Link>
                 </div>
-                <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 14px', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  Värvi koos →
-                </Link>
+
+                {/* Grupi piltide ostmine */}
+                <button
+                  onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
+                  style={{ background: '#f5f0ff', border: '1px solid #d0c0f0', borderRadius: '10px', padding: '8px 14px', color: '#6040a0', fontSize: '12px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                >
+                  🛒 Osta grupile pilt (3€) {selectedGroup === group.id ? '▲' : '▼'}
+                </button>
+
+                {selectedGroup === group.id && (
+                  <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {illustrations.map(ill => {
+                      const isOwned = groupPurchases[group.id]?.includes(ill.id)
+                      return (
+                        <div key={ill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fafafa', borderRadius: '10px', border: '1px solid #f0ece6' }}>
+                          <div>
+                            <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#2d2d2d' }}>{ill.title}</p>
+                            <p style={{ margin: 0, fontSize: '11px', color: '#aaa' }}>{ill.difficulty}</p>
+                          </div>
+                          {isOwned ? (
+                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
+                              ✓ Ostetud
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleGroupBuy(group.id, ill)}
+                              style={{ fontSize: '11px', padding: '6px 12px', borderRadius: '100px', background: '#f5f0ff', color: '#6040a0', fontWeight: 600, border: '1px solid #d0c0f0', cursor: 'pointer' }}
+                            >
+                              3.00€ osta
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             ))
           )}

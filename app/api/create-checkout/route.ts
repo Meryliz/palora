@@ -5,7 +5,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 export async function POST(req: NextRequest) {
   try {
-    const { illustrationId, illustrationTitle, price, userId } = await req.json()
+    const { illustrationId, illustrationTitle, price, userId, groupId } = await req.json()
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
             currency: 'eur',
             product_data: {
               name: illustrationTitle,
-              description: 'Palora värvimispilt'
+              description: groupId ? 'Palora grupi värvimispilt' : 'Palora värvimispilt'
             },
             unit_amount: Math.round(price * 100)
           },
@@ -23,9 +23,9 @@ export async function POST(req: NextRequest) {
         }
       ],
       mode: 'payment',
-      metadata: { illustrationId, userId },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/purchase-success?illustrationId=${illustrationId}&userId=${userId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?cancelled=true`
+      metadata: { illustrationId, userId, groupId: groupId || '' },
+      success_url: `https://www.palora.ee/api/purchase-success?illustrationId=${illustrationId}&userId=${userId}&groupId=${groupId || ''}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://www.palora.ee/dashboard?cancelled=true`
     })
 
     return NextResponse.json({ url: session.url })
