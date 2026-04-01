@@ -21,6 +21,7 @@ export default function ColorPage() {
   const [sections, setSections] = useState<Record<string, string>>({})
   const [user, setUser] = useState<any>(null)
   const [realtimeStatus, setRealtimeStatus] = useState('')
+  const [showColors, setShowColors] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -130,97 +131,131 @@ export default function ColorPage() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
+    <main style={{ minHeight: '100vh', background: '#fafafa', fontFamily: 'Segoe UI, sans-serif', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Header */}
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
-        padding: '0 32px',
-        height: '60px',
+        padding: '0 16px',
+        height: '56px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
+        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        flexShrink: 0
       }}>
         <button
           onClick={() => router.push(groupId ? '/groups' : '/dashboard')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#666' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#666', padding: '8px 0' }}
         >
           ← Tagasi
         </button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '16px', color: '#2d2d2d' }}>{illustration.title}</span>
-          <span style={{ fontSize: '11px', color: '#aaa' }}>
-            {groupId ? '👥 Grupi värvimine' : '👤 Isiklik värvimine'}
+          <span style={{ fontWeight: 700, fontSize: '14px', color: '#2d2d2d' }}>{illustration.title}</span>
+          <span style={{ fontSize: '10px', color: '#aaa' }}>
+            {groupId ? '👥 Grupp' : '👤 Isiklik'}
           </span>
         </div>
-        <span style={{ fontSize: '11px', color: realtimeStatus === 'SUBSCRIBED' ? '#2ECC71' : '#aaa' }}>
-          {realtimeStatus === 'SUBSCRIBED' ? '● Ühendatud' : '● Ühendab...'}
+        <span style={{ fontSize: '10px', color: realtimeStatus === 'SUBSCRIBED' ? '#2ECC71' : '#aaa' }}>
+          {realtimeStatus === 'SUBSCRIBED' ? '● Live' : '● ...'}
         </span>
       </header>
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 60px)' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: '#fafafa' }}>
-          <div
-            style={{ width: '500px', height: '500px', background: 'white', borderRadius: '16px', boxShadow: '0 8px 40px rgba(0,0,0,0.1)', overflow: 'hidden', cursor: 'crosshair' }}
-            onClick={e => {
-              const target = e.target as SVGElement
-              const id = target.getAttribute('id')
-              if (id && id.startsWith('s')) handleSectionClick(id)
-            }}
-            dangerouslySetInnerHTML={{
-              __html: getSvgWithColors().replace('<svg ', '<svg style="width:100%;height:100%;" ')
-            }}
-          />
-        </div>
+      {/* Canvas */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '500px',
+            aspectRatio: '1',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            cursor: 'crosshair'
+          }}
+          onClick={e => {
+            const target = e.target as SVGElement
+            const id = target.getAttribute('id')
+            if (id && id.startsWith('s')) handleSectionClick(id)
+          }}
+          dangerouslySetInnerHTML={{
+            __html: getSvgWithColors().replace('<svg ', '<svg style="width:100%;height:100%;" ')
+          }}
+        />
+      </div>
 
-        <div style={{ width: '220px', background: '#ffffff', borderLeft: '1px solid #f0ece6', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#2d2d2d' }}>Vali värv</p>
-
-          <div style={{ width: '100%', height: '48px', borderRadius: '10px', background: selectedColor, border: '2px solid #e8e4de' }} />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
-            {COLORS.map(color => (
+      {/* Color bar - mobiilisõbralik alumine riba */}
+      <div style={{
+        background: 'white',
+        borderTop: '1px solid #f0ece6',
+        padding: '12px 16px',
+        flexShrink: 0
+      }}>
+        {/* Selected color + toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: showColors ? '12px' : '0' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: selectedColor, border: '2px solid #e8e4de', flexShrink: 0 }} />
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flex: 1 }}>
+            {COLORS.slice(0, 10).map(color => (
               <div
                 key={color}
                 onClick={() => setSelectedColor(color)}
                 style={{
-                  width: '32px', height: '32px', borderRadius: '6px', background: color, cursor: 'pointer',
-                  border: selectedColor === color ? '3px solid #2d2d2d' : '2px solid #e8e4de',
-                  transition: 'all 0.15s'
+                  width: '30px', height: '30px', borderRadius: '6px', background: color,
+                  cursor: 'pointer', flexShrink: 0,
+                  border: selectedColor === color ? '3px solid #2d2d2d' : '2px solid #e8e4de'
                 }}
               />
             ))}
           </div>
-
-          <div>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#aaa' }}>Kohandatud värv</p>
-            <input
-              type="color"
-              value={selectedColor}
-              onChange={e => setSelectedColor(e.target.value)}
-              style={{ width: '100%', height: '40px', border: '1px solid #e8e4de', borderRadius: '8px', cursor: 'pointer', padding: '2px' }}
-            />
-          </div>
-
           <button
-            onClick={async () => {
-              setSections({})
-              let query = supabase
-                .from('coloring_progress')
-                .delete()
-                .eq('illustration_id', params.id)
-              if (groupId) {
-                query = query.eq('group_id', groupId)
-              } else {
-                query = query.eq('user_id', user?.id).is('group_id', null)
-              }
-              await query
-            }}
-            style={{ background: '#fff5f5', border: '1px solid #fcc', color: '#c00', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', marginTop: 'auto' }}
+            onClick={() => setShowColors(!showColors)}
+            style={{ background: '#f5f5f5', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '12px', color: '#666', flexShrink: 0 }}
           >
-            🗑️ Lähtesta
+            {showColors ? '▲' : '▼ Rohkem'}
           </button>
         </div>
+
+        {/* Extended color panel */}
+        {showColors && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px', marginBottom: '10px' }}>
+              {COLORS.map(color => (
+                <div
+                  key={color}
+                  onClick={() => setSelectedColor(color)}
+                  style={{
+                    height: '32px', borderRadius: '6px', background: color,
+                    cursor: 'pointer',
+                    border: selectedColor === color ? '3px solid #2d2d2d' : '2px solid #e8e4de'
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={selectedColor}
+                onChange={e => setSelectedColor(e.target.value)}
+                style={{ width: '40px', height: '36px', border: '1px solid #e8e4de', borderRadius: '8px', cursor: 'pointer', padding: '2px' }}
+              />
+              <span style={{ fontSize: '12px', color: '#aaa' }}>Kohandatud värv</span>
+              <button
+                onClick={async () => {
+                  setSections({})
+                  let query = supabase.from('coloring_progress').delete().eq('illustration_id', params.id)
+                  if (groupId) { query = query.eq('group_id', groupId) }
+                  else { query = query.eq('user_id', user?.id).is('group_id', null) }
+                  await query
+                }}
+                style={{ marginLeft: 'auto', background: '#fff5f5', border: '1px solid #fcc', color: '#c00', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                🗑️ Lähtesta
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )

@@ -91,7 +91,7 @@ export default function Groups() {
       <header style={{
         background: '#ffffff',
         borderBottom: '1px solid #f0ece6',
-        padding: '0 32px',
+        padding: '0 16px',
         height: '60px',
         display: 'flex',
         alignItems: 'center',
@@ -105,67 +105,64 @@ export default function Groups() {
         <div style={{ width: '60px' }} />
       </header>
 
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '24px 16px' }}>
 
         {message && (
-          <div style={{ background: '#f0faf0', border: '1px solid #c0e0c0', borderRadius: '12px', padding: '16px', marginBottom: '24px', color: '#2a7a2a', fontSize: '14px' }}>
+          <div style={{ background: '#f0faf0', border: '1px solid #c0e0c0', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', color: '#2a7a2a', fontSize: '14px' }}>
             {message}
           </div>
         )}
 
-        {/* Loo grupp */}
-        <div style={{ background: 'white', borderRadius: '20px', padding: '28px', marginBottom: '24px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 700, color: '#2d2d2d' }}>Loo uus grupp</h2>
-          <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Loo uus grupp</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <input
               placeholder="Grupi nimi"
               value={newGroupName}
               onChange={e => setNewGroupName(e.target.value)}
-              style={{ flex: 1, border: '1.5px solid #e8e4de', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: '#2d2d2d', outline: 'none' }}
+              style={{ flex: 1, border: '1.5px solid #e8e4de', borderRadius: '12px', padding: '11px 14px', fontSize: '14px', color: '#2d2d2d', outline: 'none' }}
             />
             <button
               onClick={createGroup}
               disabled={loading}
-              style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', border: 'none', borderRadius: '12px', padding: '12px 24px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
+              style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', border: 'none', borderRadius: '12px', padding: '11px 20px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap' }}
             >
               Loo
             </button>
           </div>
         </div>
 
-        {/* Liitu grupiga */}
-        <div style={{ background: 'white', borderRadius: '20px', padding: '28px', marginBottom: '24px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 700, color: '#2d2d2d' }}>Liitu grupiga</h2>
-          <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Liitu grupiga</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
             <input
-              placeholder="Sisesta kutse kood"
+              placeholder="Kutse kood"
               value={inviteCode}
               onChange={e => setInviteCode(e.target.value)}
-              style={{ flex: 1, border: '1.5px solid #e8e4de', borderRadius: '12px', padding: '12px 16px', fontSize: '14px', color: '#2d2d2d', outline: 'none' }}
+              style={{ flex: 1, border: '1.5px solid #e8e4de', borderRadius: '12px', padding: '11px 14px', fontSize: '14px', color: '#2d2d2d', outline: 'none' }}
             />
             <button
               onClick={joinGroup}
               disabled={loading}
-              style={{ background: '#f0faf0', border: '1.5px solid #c0e0c0', borderRadius: '12px', padding: '12px 24px', color: '#2a7a2a', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
+              style={{ background: '#f0faf0', border: '1.5px solid #c0e0c0', borderRadius: '12px', padding: '11px 20px', color: '#2a7a2a', fontWeight: 700, cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap' }}
             >
               Liitu
             </button>
           </div>
         </div>
 
-        {/* Minu grupid */}
-        <div style={{ background: 'white', borderRadius: '20px', padding: '28px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 700, color: '#2d2d2d' }}>Minu grupid</h2>
+        <div style={{ background: 'white', borderRadius: '20px', padding: '24px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Minu grupid</h2>
           {groups.length === 0 ? (
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Sul pole veel gruppe</p>
+            <p style={{ color: '#aaa', fontSize: '14px', margin: 0 }}>Sul pole veel gruppe</p>
           ) : (
             groups.map(group => (
-              <div key={group.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #f0ece6' }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d' }}>{group.name}</p>
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#aaa' }}>Kutse kood: <strong>{group.invite_code}</strong></p>
+              <div key={group.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f0ece6', gap: '12px' }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>Kood: <strong>{group.invite_code}</strong></p>
                 </div>
-                <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 16px', color: 'white', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+                <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 14px', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Värvi koos →
                 </Link>
               </div>
