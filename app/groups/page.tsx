@@ -49,7 +49,6 @@ export default function Groups() {
     )
     setGroups(uniqueGroups)
 
-    // Laadi grupi ostud
     const groupIds = uniqueGroups.map((g: any) => g.id)
     if (groupIds.length > 0) {
       const { data: purchases } = await supabase
@@ -102,6 +101,17 @@ export default function Groups() {
 
     if (!group) {
       setMessage('Gruppi ei leitud!')
+      setLoading(false)
+      return
+    }
+
+    const { count } = await supabase
+      .from('group_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('group_id', group.id)
+
+    if (count && count >= 10) {
+      setMessage('Grupp on täis! Maksimaalselt 10 liiget.')
       setLoading(false)
       return
     }
@@ -226,7 +236,6 @@ export default function Groups() {
                   </Link>
                 </div>
 
-                {/* Grupi piltide ostmine */}
                 <button
                   onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
                   style={{ background: '#f5f0ff', border: '1px solid #d0c0f0', borderRadius: '10px', padding: '8px 14px', color: '#6040a0', fontSize: '12px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
