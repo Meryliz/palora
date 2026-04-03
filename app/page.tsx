@@ -66,7 +66,7 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
           {[
             { emoji: '🎨', title: 'Värvid koos', desc: 'Kutsu sõbrad ja värvige sama pilti samaaegselt — näete muutusi reaalajas.' },
-            { emoji: '🔒', title: 'Alusta tasuta', desc: '9 tasuta pilti kolmel raskusastmel. Lisa rohkem vaid 1€ eest.' },
+            { emoji: '🔒', title: 'Tasuta alustada', desc: '9 tasuta pilti kolmel raskusastmel. Lisa rohkem vaid 1€ tükkidest.' },
             { emoji: '🌸', title: 'Kolm taset', desc: 'Algajast meistrini — lihtsad maastikud, geomeetrilised loomad ja keerulised kompositsioonid.' }
           ].map((f, i) => (
             <div key={i} style={{ background: 'white', borderRadius: '20px', padding: '28px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', textAlign: 'center' }}>
@@ -94,9 +94,13 @@ export default function Home() {
       {/* Footer */}
       <div style={{ background: '#1a1a1a', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ color: '#555', fontSize: '12px' }}>© 2026 Palora. Kõik õigused kaitstud.</span>
-        <span style={{ color: '#555', fontSize: '12px' }}>Notso OÜ</span>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <Link href="/tingimused" style={{ color: '#555', fontSize: '12px', textDecoration: 'none' }}>Tingimused</Link>
+          <span style={{ color: '#555', fontSize: '12px' }}>Notso OÜ</span>
+        </div>
       </div>
 
     </main>
   )
+}
 }
