@@ -39,30 +39,39 @@ export default function Groups() {
   }, [])
 
   const loadGroups = async (userId: string) => {
-    const { data } = await supabase
+    // Lae kõik group_member read selle kasutaja jaoks
+    const { data: memberData } = await supabase
       .from('group_members')
-      .select('group_id, groups(*)')
+      .select('group_id')
       .eq('user_id', userId)
 
-    const uniqueGroups = Array.from(
-      new Map((data?.map((d: any) => d.groups) || []).map((g: any) => [g.id, g])).values()
-    )
-    setGroups(uniqueGroups)
-
-    const groupIds = uniqueGroups.map((g: any) => g.id)
-    if (groupIds.length > 0) {
-      const { data: purchases } = await supabase
-        .from('group_purchases')
-        .select('group_id, illustration_id')
-        .in('group_id', groupIds)
-
-      const purchaseMap: Record<string, string[]> = {}
-      purchases?.forEach((p: any) => {
-        if (!purchaseMap[p.group_id]) purchaseMap[p.group_id] = []
-        purchaseMap[p.group_id].push(p.illustration_id)
-      })
-      setGroupPurchases(purchaseMap)
+    if (!memberData || memberData.length === 0) {
+      setGroups([])
+      return
     }
+
+    const groupIds = memberData.map((m: any) => m.group_id)
+
+    // Lae grupid eraldi päringuga
+    const { data: groupData } = await supabase
+      .from('groups')
+      .select('*')
+      .in('id', groupIds)
+
+    setGroups(groupData || [])
+
+    // Lae grupi ostud
+    const { data: purchases } = await supabase
+      .from('group_purchases')
+      .select('group_id, illustration_id')
+      .in('group_id', groupIds)
+
+    const purchaseMap: Record<string, string[]> = {}
+    purchases?.forEach((p: any) => {
+      if (!purchaseMap[p.group_id]) purchaseMap[p.group_id] = []
+      purchaseMap[p.group_id].push(p.illustration_id)
+    })
+    setGroupPurchases(purchaseMap)
   }
 
   const createGroup = async () => {
@@ -121,9 +130,10 @@ export default function Groups() {
       { group_id: group.id, user_id: user.id },
       { onConflict: 'group_id,user_id' }
     )
+
     setInviteCode('')
     setMessage(`Liitusid grupiga: ${group.name}!`)
-    loadGroups(user.id)
+    await loadGroups(user.id)
     setLoading(false)
   }
 
