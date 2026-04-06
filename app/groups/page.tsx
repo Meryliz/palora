@@ -39,7 +39,6 @@ export default function Groups() {
   }, [])
 
   const loadGroups = async (userId: string) => {
-    // Lae kõik group_member read selle kasutaja jaoks
     const { data: memberData } = await supabase
       .from('group_members')
       .select('group_id')
@@ -52,7 +51,6 @@ export default function Groups() {
 
     const groupIds = memberData.map((m: any) => m.group_id)
 
-    // Lae grupid eraldi päringuga
     const { data: groupData } = await supabase
       .from('groups')
       .select('*')
@@ -60,7 +58,6 @@ export default function Groups() {
 
     setGroups(groupData || [])
 
-    // Lae grupi ostud
     const { data: purchases } = await supabase
       .from('group_purchases')
       .select('group_id, illustration_id')
@@ -79,21 +76,33 @@ export default function Groups() {
     setLoading(true)
     const code = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    const { data: group } = await supabase
+    const { data: group, error: groupError } = await supabase
       .from('groups')
       .insert({ name: newGroupName, invite_code: code, owner_id: user.id })
       .select()
       .single()
 
+    if (groupError) {
+      setMessage('Viga grupi loomisel!')
+      setLoading(false)
+      return
+    }
+
     if (group) {
-      await supabase.from('group_members').upsert(
-        { group_id: group.id, user_id: user.id },
-        { onConflict: 'group_id,user_id' }
-      )
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, user_id: user.id })
+
+      if (memberError) {
+        setMessage('Viga grupiga liitumisel!')
+        setLoading(false)
+        return
+      }
+
       await supabase.from('profiles').upsert({ id: user.id, email: user.email })
       setNewGroupName('')
       setMessage(`Grupp loodud! Kutse kood: ${code}`)
-      loadGroups(user.id)
+      await loadGroups(user.id)
     }
     setLoading(false)
   }
@@ -125,11 +134,25 @@ export default function Groups() {
       return
     }
 
-    await supabase.from('profiles').upsert({ id: user.id, email: user.email })
-    await supabase.from('group_members').upsert(
-      { group_id: group.id, user_id: user.id },
-      { onConflict: 'group_id,user_id' }
-    )
+    const { data: existing } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', group.id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!existing) {
+      await supabase.from('profiles').upsert({ id: user.id, email: user.email })
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, user_id: user.id })
+
+      if (memberError) {
+        setMessage('Viga grupiga liitumisel!')
+        setLoading(false)
+        return
+      }
+    }
 
     setInviteCode('')
     setMessage(`Liitusid grupiga: ${group.name}!`)
@@ -180,7 +203,6 @@ export default function Groups() {
           </div>
         )}
 
-        {/* Info */}
         <div style={{ background: 'linear-gradient(135deg, #f0f4ff, #f9f0ff)', borderRadius: '16px', padding: '20px', marginBottom: '20px', border: '1px solid #e0d8f0' }}>
           <h3 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: 700, color: '#2d2d2d' }}>👥 Grupi info</h3>
           <p style={{ margin: 0, fontSize: '13px', color: '#666', lineHeight: 1.6 }}>
@@ -188,7 +210,6 @@ export default function Groups() {
           </p>
         </div>
 
-        {/* Loo grupp */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Loo uus grupp</h2>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -208,7 +229,6 @@ export default function Groups() {
           </div>
         </div>
 
-        {/* Liitu grupiga */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', marginBottom: '20px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Liitu grupiga</h2>
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -228,7 +248,6 @@ export default function Groups() {
           </div>
         </div>
 
-        {/* Minu grupid */}
         <div style={{ background: 'white', borderRadius: '20px', padding: '24px', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
           <h2 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700, color: '#2d2d2d' }}>Minu grupid</h2>
           {groups.length === 0 ? (
