@@ -56,7 +56,17 @@ export default function Groups() {
       .select('*')
       .in('id', groupIds)
 
-    setGroups(groupData || [])
+    const groupsWithCount = await Promise.all(
+      (groupData || []).map(async (group: any) => {
+        const { count } = await supabase
+          .from('group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id)
+        return { ...group, memberCount: count || 0 }
+      })
+    )
+
+    setGroups(groupsWithCount)
 
     const { data: purchases } = await supabase
       .from('group_purchases')
@@ -258,7 +268,9 @@ export default function Groups() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
                     <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d', fontSize: '15px' }}>{group.name}</p>
-                    <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>Kood: <strong>{group.invite_code}</strong></p>
+                    <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>
+                      Kood: <strong>{group.invite_code}</strong> · 👥 {group.memberCount}/10 liiget
+                    </p>
                   </div>
                   <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 14px', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     Värvi koos →
