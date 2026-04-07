@@ -170,6 +170,23 @@ export default function Groups() {
     setLoading(false)
   }
 
+  const leaveGroup = async (groupId: string, groupName: string, isOwner: boolean) => {
+    if (isOwner) {
+      setMessage('Grupi looja ei saa grupist lahkuda!')
+      return
+    }
+    if (!confirm(`Kas oled kindel, et tahad lahkuda grupist "${groupName}"?`)) return
+
+    await supabase
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+
+    setMessage(`Lahkusid grupist: ${groupName}`)
+    await loadGroups(user.id)
+  }
+
   const handleGroupBuy = async (groupId: string, ill: any) => {
     const res = await fetch('/api/create-checkout', {
       method: 'POST',
@@ -277,12 +294,22 @@ export default function Groups() {
                   </Link>
                 </div>
 
-                <button
-                  onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
-                  style={{ background: '#f5f0ff', border: '1px solid #d0c0f0', borderRadius: '10px', padding: '8px 14px', color: '#6040a0', fontSize: '12px', fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left' }}
-                >
-                  🛒 Osta grupile pilt (3€) {selectedGroup === group.id ? '▲' : '▼'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <button
+                    onClick={() => setSelectedGroup(selectedGroup === group.id ? null : group.id)}
+                    style={{ background: '#f5f0ff', border: '1px solid #d0c0f0', borderRadius: '10px', padding: '8px 14px', color: '#6040a0', fontSize: '12px', fontWeight: 600, cursor: 'pointer', flex: 1, textAlign: 'left' }}
+                  >
+                    🛒 Osta grupile pilt (3€) {selectedGroup === group.id ? '▲' : '▼'}
+                  </button>
+                  {group.owner_id !== user?.id && (
+                    <button
+                      onClick={() => leaveGroup(group.id, group.name, group.owner_id === user?.id)}
+                      style={{ background: '#fff5f5', border: '1px solid #fcc', borderRadius: '10px', padding: '8px 12px', color: '#c00', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Lahku
+                    </button>
+                  )}
+                </div>
 
                 {selectedGroup === group.id && (
                   <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
