@@ -8,7 +8,8 @@ function DashboardContent() {
   const [user, setUser] = useState<any>(null)
   const [illustrations, setIllustrations] = useState<any[]>([])
   const [difficulty, setDifficulty] = useState('easy')
-  const [purchases, setPurchases] = useState<string[]>([])
+  const [personalPurchases, setPersonalPurchases] = useState<string[]>([])
+  const [groupPurchasesMap, setGroupPurchasesMap] = useState<Record<string, string[]>>({})
   const [myGroups, setMyGroups] = useState<any[]>([])
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const router = useRouter()
@@ -19,7 +20,6 @@ function DashboardContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
-
       const groupParam = searchParams.get('group')
       if (groupParam) setSelectedGroupId(groupParam)
     }
@@ -30,11 +30,14 @@ function DashboardContent() {
     const getPurchases = async () => {
       if (!user) return
 
-      const { data: personalPurchases } = await supabase
+      // Isiklikud ostud
+      const { data: personal } = await supabase
         .from('purchases')
         .select('illustration_id')
         .eq('user_id', user.id)
+      setPersonalPurchases(personal?.map(p => p.illustration_id) || [])
 
+      // Grupid
       const { data: memberGroups } = await supabase
         .from('group_members')
         .select('group_id, groups(*)')
@@ -43,21 +46,20 @@ function DashboardContent() {
       const groupIds = memberGroups?.map(g => g.group_id) || []
       setMyGroups(memberGroups?.map((m: any) => m.groups).filter(Boolean) || [])
 
-      let groupIllustrationIds: string[] = []
+      // Grupi ostud grupiti
       if (groupIds.length > 0) {
-        const { data: groupPurchases } = await supabase
+        const { data: gPurchases } = await supabase
           .from('group_purchases')
-          .select('illustration_id')
+          .select('group_id, illustration_id')
           .in('group_id', groupIds)
-        groupIllustrationIds = groupPurchases?.map(p => p.illustration_id) || []
+
+        const gMap: Record<string, string[]> = {}
+        gPurchases?.forEach((p: any) => {
+          if (!gMap[p.group_id]) gMap[p.group_id] = []
+          gMap[p.group_id].push(p.illustration_id)
+        })
+        setGroupPurchasesMap(gMap)
       }
-
-      const allPurchases = [
-        ...(personalPurchases?.map(p => p.illustration_id) || []),
-        ...groupIllustrationIds
-      ]
-
-      setPurchases([...new Set(allPurchases)])
     }
     getPurchases()
   }, [user])
@@ -102,6 +104,22 @@ function DashboardContent() {
 
   const current = levels.find(l => l.key === difficulty)!
   const selectedGroup = myGroups.find((g: any) => g.id === selectedGroupId)
+
+  // Mis pildid on avatud praeguses vaates
+  const getIsUnlocked = (ill: any) => {
+    if (ill.is_free) return true
+    if (selectedGroupId) {
+      return groupPurchasesMap[selectedGroupId]?.includes(ill.id) || false
+    }
+    return personalPurchases.includes(ill.id)
+  }
+
+  const getStatusLabel = (ill: any) => {
+    if (ill.is_free) return '✓ Tasuta'
+    if (selectedGroupId && groupPurchasesMap[selectedGroupId]?.includes(ill.id)) return '✓ Grupp ostis'
+    if (personalPurchases.includes(ill.id)) return '✓ Ostetud'
+    return null
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
@@ -213,7 +231,8 @@ function DashboardContent() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
           {illustrations.map(ill => {
-            const isUnlocked = ill.is_free || purchases.includes(ill.id)
+            const isUnlocked = getIsUnlocked(ill)
+            const statusLabel = getStatusLabel(ill)
             const colorLink = selectedGroupId
               ? `/color/${ill.id}?group=${selectedGroupId}`
               : `/color/${ill.id}`
@@ -242,7 +261,7 @@ function DashboardContent() {
                     </h3>
                     {isUnlocked ? (
                       <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
-                        {ill.is_free ? '✓ Tasuta' : '✓ Ostetud'}
+                        {statusLabel}
                       </span>
                     ) : (
                       <button
