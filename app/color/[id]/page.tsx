@@ -24,6 +24,8 @@ export default function ColorPage() {
   const [showColors, setShowColors] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
+  const backUrl = groupId ? `/dashboard?group=${groupId}` : '/dashboard'
+
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -139,7 +141,7 @@ export default function ColorPage() {
         flexShrink: 0
       }}>
         <button
-          onClick={() => router.push(groupId ? '/groups' : '/dashboard')}
+          onClick={() => router.push(backUrl)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#666', padding: '8px 0' }}
         >
           ← Tagasi
