@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   }
 
   const redirectUrl = groupId
-    ? `/groups`
+    ? `/dashboard?group=${groupId}`
     : `/dashboard?success=true`
 
   return NextResponse.redirect(new URL(redirectUrl, req.url))
