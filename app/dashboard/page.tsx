@@ -1,10 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function Dashboard() {
+function DashboardContent() {
   const [user, setUser] = useState<any>(null)
   const [illustrations, setIllustrations] = useState<any[]>([])
   const [difficulty, setDifficulty] = useState('easy')
@@ -137,7 +137,6 @@ export default function Dashboard() {
           Tere tulemast! 🌈
         </h1>
 
-        {/* Grupi valija */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button
             onClick={() => setSelectedGroupId(null)}
@@ -272,5 +271,18 @@ export default function Dashboard() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ fontSize: '32px' }}>🎨</div>
+        <p style={{ color: '#aaa', fontSize: '14px' }}>Laadin...</p>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
