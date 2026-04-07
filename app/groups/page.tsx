@@ -170,11 +170,7 @@ export default function Groups() {
     setLoading(false)
   }
 
-  const leaveGroup = async (groupId: string, groupName: string, isOwner: boolean) => {
-    if (isOwner) {
-      setMessage('Grupi looja ei saa grupist lahkuda!')
-      return
-    }
+  const leaveGroup = async (groupId: string, groupName: string) => {
     if (!confirm(`Kas oled kindel, et tahad lahkuda grupist "${groupName}"?`)) return
 
     await supabase
@@ -184,6 +180,18 @@ export default function Groups() {
       .eq('user_id', user.id)
 
     setMessage(`Lahkusid grupist: ${groupName}`)
+    await loadGroups(user.id)
+  }
+
+  const deleteGroup = async (groupId: string, groupName: string) => {
+    if (!confirm(`Kas oled kindel, et tahad kustutada grupi "${groupName}"? Kõik grupiliikmed kaotavad juurdepääsu.`)) return
+
+    await supabase.from('coloring_progress').delete().eq('group_id', groupId)
+    await supabase.from('group_purchases').delete().eq('group_id', groupId)
+    await supabase.from('group_members').delete().eq('group_id', groupId)
+    await supabase.from('groups').delete().eq('id', groupId)
+
+    setMessage(`Grupp "${groupName}" kustutatud!`)
     await loadGroups(user.id)
   }
 
@@ -287,6 +295,7 @@ export default function Groups() {
                     <p style={{ margin: 0, fontWeight: 600, color: '#2d2d2d', fontSize: '15px' }}>{group.name}</p>
                     <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#aaa' }}>
                       Kood: <strong>{group.invite_code}</strong> · 👥 {group.memberCount}/10 liiget
+                      {group.owner_id === user?.id && <span style={{ marginLeft: '6px', color: '#a78bfa' }}>· 👑 Looja</span>}
                     </p>
                   </div>
                   <Link href={`/dashboard?group=${group.id}`} style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)', borderRadius: '10px', padding: '8px 14px', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -301,9 +310,16 @@ export default function Groups() {
                   >
                     🛒 Osta grupile pilt (3€) {selectedGroup === group.id ? '▲' : '▼'}
                   </button>
-                  {group.owner_id !== user?.id && (
+                  {group.owner_id === user?.id ? (
                     <button
-                      onClick={() => leaveGroup(group.id, group.name, group.owner_id === user?.id)}
+                      onClick={() => deleteGroup(group.id, group.name)}
+                      style={{ background: '#fff5f5', border: '1px solid #fcc', borderRadius: '10px', padding: '8px 12px', color: '#c00', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      🗑️ Kustuta
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => leaveGroup(group.id, group.name)}
                       style={{ background: '#fff5f5', border: '1px solid #fcc', borderRadius: '10px', padding: '8px 12px', color: '#c00', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
                       Lahku
