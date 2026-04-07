@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function Dashboard() {
@@ -9,13 +9,19 @@ export default function Dashboard() {
   const [illustrations, setIllustrations] = useState<any[]>([])
   const [difficulty, setDifficulty] = useState('easy')
   const [purchases, setPurchases] = useState<string[]>([])
+  const [myGroups, setMyGroups] = useState<any[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUser(user)
+
+      const groupParam = searchParams.get('group')
+      if (groupParam) setSelectedGroupId(groupParam)
     }
     getUser()
   }, [])
@@ -31,10 +37,11 @@ export default function Dashboard() {
 
       const { data: memberGroups } = await supabase
         .from('group_members')
-        .select('group_id')
+        .select('group_id, groups(*)')
         .eq('user_id', user.id)
 
       const groupIds = memberGroups?.map(g => g.group_id) || []
+      setMyGroups(memberGroups?.map((m: any) => m.groups).filter(Boolean) || [])
 
       let groupIllustrationIds: string[] = []
       if (groupIds.length > 0) {
@@ -94,6 +101,7 @@ export default function Dashboard() {
   ]
 
   const current = levels.find(l => l.key === difficulty)!
+  const selectedGroup = myGroups.find((g: any) => g.id === selectedGroupId)
 
   return (
     <main style={{ minHeight: '100vh', background: '#fdfcfa', fontFamily: 'Segoe UI, sans-serif' }}>
@@ -124,13 +132,55 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div style={{ background: 'linear-gradient(135deg, #fff9f0 0%, #f0f4ff 50%, #f9f0ff 100%)', padding: 'clamp(30px, 6vw, 56px) 16px', textAlign: 'center', borderBottom: '1px solid #f0ece6' }}>
-        <h1 style={{ fontSize: 'clamp(24px, 6vw, 40px)', fontWeight: 800, color: '#2d2d2d', margin: '0 0 8px', letterSpacing: '-1px' }}>
+      <div style={{ background: 'linear-gradient(135deg, #fff9f0 0%, #f0f4ff 50%, #f9f0ff 100%)', padding: 'clamp(20px, 4vw, 40px) 16px', borderBottom: '1px solid #f0ece6' }}>
+        <h1 style={{ fontSize: 'clamp(22px, 5vw, 36px)', fontWeight: 800, color: '#2d2d2d', margin: '0 0 12px', letterSpacing: '-1px', textAlign: 'center' }}>
           Tere tulemast! 🌈
         </h1>
-        <p style={{ fontSize: 'clamp(14px, 3vw, 17px)', color: '#888', margin: 0, lineHeight: 1.6 }}>
-          Vali pilt ja alusta värvimist
-        </p>
+
+        {/* Grupi valija */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button
+            onClick={() => setSelectedGroupId(null)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '100px',
+              border: '2px solid',
+              borderColor: !selectedGroupId ? '#818cf8' : '#e8e4de',
+              background: !selectedGroupId ? '#f0f0ff' : 'white',
+              color: !selectedGroupId ? '#4040cc' : '#888',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            👤 Isiklik
+          </button>
+          {myGroups.map((group: any) => (
+            <button
+              key={group.id}
+              onClick={() => setSelectedGroupId(group.id)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '100px',
+                border: '2px solid',
+                borderColor: selectedGroupId === group.id ? '#a78bfa' : '#e8e4de',
+                background: selectedGroupId === group.id ? '#f5f0ff' : 'white',
+                color: selectedGroupId === group.id ? '#6040a0' : '#888',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+            >
+              👥 {group.name}
+            </button>
+          ))}
+        </div>
+
+        {selectedGroupId && selectedGroup && (
+          <p style={{ textAlign: 'center', margin: '10px 0 0', fontSize: '13px', color: '#888' }}>
+            Värvid koos grupiga <strong>{selectedGroup.name}</strong>
+          </p>
+        )}
       </div>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
@@ -165,12 +215,16 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
           {illustrations.map(ill => {
             const isUnlocked = ill.is_free || purchases.includes(ill.id)
+            const colorLink = selectedGroupId
+              ? `/color/${ill.id}?group=${selectedGroupId}`
+              : `/color/${ill.id}`
+
             return (
               <div key={ill.id}
                 style={{ background: '#ffffff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #f0ece6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
               >
                 {isUnlocked ? (
-                  <Link href={`/color/${ill.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  <Link href={colorLink} style={{ textDecoration: 'none', display: 'block' }}>
                     <div style={{ background: '#f8f8f8', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
                       dangerouslySetInnerHTML={{ __html: ill.svg_data ? ill.svg_data.replace('<svg ', '<svg style="width:100%;height:148px;" ') : '' }}
                     />
