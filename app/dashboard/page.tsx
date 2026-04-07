@@ -30,14 +30,12 @@ function DashboardContent() {
     const getPurchases = async () => {
       if (!user) return
 
-      // Isiklikud ostud
       const { data: personal } = await supabase
         .from('purchases')
         .select('illustration_id')
         .eq('user_id', user.id)
       setPersonalPurchases(personal?.map(p => p.illustration_id) || [])
 
-      // Grupid
       const { data: memberGroups } = await supabase
         .from('group_members')
         .select('group_id, groups(*)')
@@ -46,7 +44,6 @@ function DashboardContent() {
       const groupIds = memberGroups?.map(g => g.group_id) || []
       setMyGroups(memberGroups?.map((m: any) => m.groups).filter(Boolean) || [])
 
-      // Grupi ostud grupiti
       if (groupIds.length > 0) {
         const { data: gPurchases } = await supabase
           .from('group_purchases')
@@ -96,6 +93,22 @@ function DashboardContent() {
     if (url) window.location.href = url
   }
 
+  const handleGroupBuy = async (ill: any) => {
+    const res = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        illustrationId: ill.id,
+        illustrationTitle: `${ill.title} (grupp)`,
+        price: 3.00,
+        userId: user?.id,
+        groupId: selectedGroupId
+      })
+    })
+    const { url } = await res.json()
+    if (url) window.location.href = url
+  }
+
   const levels = [
     { key: 'easy', label: 'Algaja', desc: 'Lihtsad alad', color: '#a8d8a8', bg: '#f0faf0' },
     { key: 'medium', label: 'Harrastaja', desc: 'Loomad', color: '#f4a96e', bg: '#fff7f0' },
@@ -105,7 +118,6 @@ function DashboardContent() {
   const current = levels.find(l => l.key === difficulty)!
   const selectedGroup = myGroups.find((g: any) => g.id === selectedGroupId)
 
-  // Mis pildid on avatud praeguses vaates
   const getIsUnlocked = (ill: any) => {
     if (ill.is_free) return true
     if (selectedGroupId) {
@@ -263,6 +275,13 @@ function DashboardContent() {
                       <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '100px', background: '#e8f8e8', color: '#2a7a2a', fontWeight: 600 }}>
                         {statusLabel}
                       </span>
+                    ) : selectedGroupId ? (
+                      <button
+                        onClick={() => handleGroupBuy(ill)}
+                        style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '100px', background: '#f5f0ff', color: '#6040a0', fontWeight: 600, border: '1px solid #d0c0f0', cursor: 'pointer' }}
+                      >
+                        👥 3.00€
+                      </button>
                     ) : (
                       <button
                         onClick={() => handleBuy(ill)}
